@@ -1,17 +1,17 @@
 #!/usr/bin/python3
-"""LIFO Cache Replacement Implementation Class"""
+"""LRU Cache Replacement Implementation Class"""
 
 from threading import RLock
 
 BaseCaching = __import__('base_caching').BaseCaching
 
 
-class LIFOCache(BaseCaching):
+class LRUCache(BaseCaching):
     """
-    An implementation of LIFO (Last In, First Out) Cache Replacement Policy.
+    An implementation of LRU (Least Recently Used) Cache Replacement Policy.
 
     Attributes:
-        __keys (list): Stores cache keys in order of entry using `.append`.
+        __keys (list): Stores cache keys in order of recent usage.
         __rlock (RLock): Lock accessed resources to prevent race conditions.
     """
 
@@ -41,24 +41,27 @@ class LIFOCache(BaseCaching):
 
     def get(self, key):
         """
-        Retrieves an item from the cache based on the provided key.
+        Retrieves an item from the cache based on the provided key and updates.
 
         Args:
             key: The key to identify the item.
 
         Returns:
             The item associated with the given key,
-            else returns None
+            or None if the key is not found.
         """
         with self.__rlock:
-            return self.cache_data.get(key, None)
+            value = self.cache_data.get(key, None)
+            if key in self.__keys:
+                self._balance(key)
+        return value
 
     def _balance(self, keyIn):
         """
-        Removes the most recent item from the cache when at max capacity.
+        Removes the least recently used item from cache when at max capacity.
 
         Args:
-            keyIn: The key of the item being added to cache.
+            keyIn: The key of the item being added to the cache.
 
         Returns:
             The key of the evicted item, if any.
@@ -68,7 +71,7 @@ class LIFOCache(BaseCaching):
             keysLength = len(self.__keys)
             if keyIn not in self.__keys:
                 if len(self.cache_data) == BaseCaching.MAX_ITEMS:
-                    keyOut = self.__keys.pop(keysLength - 1)
+                    keyOut = self.__keys.pop(0)
                     self.cache_data.pop(keyOut)
             else:
                 self.__keys.remove(keyIn)
